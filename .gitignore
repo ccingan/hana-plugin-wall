@@ -12,3 +12,6 @@ __pycache__/
 *.pyc
 
 users.json
+
+# 线上完整快照（含账号、管理员令牌与管理口令，仅供本地调试）
+_server-snapshot/
