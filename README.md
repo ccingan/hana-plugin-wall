@@ -36,6 +36,22 @@ PORT=8080 python3 server.py
 
 浏览器打开 http://127.0.0.1:3000
 
+### 用当前代码打开服务器数据快照
+
+服务器完整数据下载到 `_server-snapshot/<时间戳>/` 后，可用当前开发代码读取最新一份快照：
+
+```powershell
+python start-server-snapshot.py --port 8765
+```
+
+浏览器打开 http://127.0.0.1:8765 。服务仅监听 `127.0.0.1`，不会暴露给局域网，也不会修改线上服务器。
+
+只验证快照与服务能否启动、不保持运行：
+
+```powershell
+python start-server-snapshot.py --check
+```
+
 ## 部署（服务器）
 
 以 systemd 为例（`/etc/systemd/system/hana-wall.service`）：
