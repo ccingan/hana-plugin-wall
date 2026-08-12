@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hana 插件需求墙</title>
+<title>Hana 插件墙 · 社区共创广场</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🌸%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/static/style.css">
 </head>
@@ -12,10 +12,10 @@
 <header>
   <div class="header-inner">
     <div class="logo">
-      <span class="logo-icon">🌸</span>
-      <div>
-        <h1>Hana 插件需求墙</h1>
-        <p class="subtitle">群里提出需求 · 有人认领去做 · 做完贴上仓库</p>
+      <span class="logo-icon" aria-hidden="true">H</span>
+      <div class="brand-copy">
+        <h1>Hana 插件墙</h1>
+        <p class="subtitle">社区共创 · 灵感与作品在这里相遇</p>
       </div>
     </div>
     <div class="header-right">
@@ -32,60 +32,102 @@
 </header>
 
 <main>
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="hero-copy">
+      <p class="eyebrow">HANA COMMUNITY LAB</p>
+      <h2 id="hero-title">把想法贴出来，<br><span>让作品被看见。</span></h2>
+      <p class="hero-desc">从一句需求开始，找到愿意动手的人；也让每个做出来的插件，都能遇到真正需要它的人。</p>
+    </div>
+    <div class="hero-stats" aria-label="社区内容概览">
+      <div class="hero-stat">
+        <strong id="hero-need-count">0</strong>
+        <span>尚未完成的需求</span>
+      </div>
+      <div class="hero-stat">
+        <strong id="hero-done-count">0</strong>
+        <span>社区公开成果</span>
+      </div>
+      <div class="hero-flow" aria-hidden="true">
+        <span>提出想法</span><i></i><span>共同实现</span><i></i><span>分享成果</span>
+      </div>
+    </div>
+  </section>
+
   <div class="top-row">
     <nav class="tabs">
-      <button id="tab-home" class="tab active">🏠 需求 · 成果</button>
-      <button id="tab-wall" class="tab">💬 留言板</button>
+      <button id="tab-home" class="tab active">探索广场</button>
+      <button id="tab-wall" class="tab">社区留言</button>
     </nav>
 
     <div id="announcement-bar" class="announcement-bar hidden">
-      <span class="announcement-icon">📢</span>
+      <span class="announcement-icon">公告</span>
       <span id="announcement-text" class="announcement-text" title="点击查看完整公告"></span>
       <button id="btn-edit-announcement" class="announcement-edit admin-entry hidden" title="编辑公告">✏ 编辑</button>
     </div>
   </div>
 
-  <div class="search-bar">
-    <input id="search-input" type="search" placeholder="🔍 搜索标题或内容…" autocomplete="off">
+  <div class="explore-tools">
+    <div class="explore-intro">
+      <span class="explore-kicker">EXPLORE</span>
+      <strong>现在，想找点什么？</strong>
+    </div>
+    <div class="search-bar">
+      <span class="search-icon" aria-hidden="true">⌕</span>
+      <input id="search-input" type="search" placeholder="搜索标题、内容、作者或仓库…" autocomplete="off">
+    </div>
   </div>
 
   <div id="view-home">
+  <div class="mobile-type-switch" aria-label="内容类型切换">
+    <button id="mobile-show-needs" class="mobile-type-btn active" type="button">需求 <span id="mobile-count-need">0</span></button>
+    <button id="mobile-show-dones" class="mobile-type-btn" type="button">成果 <span id="mobile-count-done">0</span></button>
+  </div>
   <div class="columns">
 
     <!-- 左栏：需求 / 委托 -->
-    <section class="col">
+    <section class="col col-need mobile-active">
       <div class="col-head">
-        <h2>📋 需求 · 委托</h2>
-        <span class="count" id="count-need">0</span>
+        <div class="col-title-group">
+          <span class="section-index">01</span>
+          <div>
+            <p class="section-kicker">IDEAS WANTED</p>
+            <h2>需求池 <span class="count" id="count-need">0</span></h2>
+          </div>
+        </div>
         <span class="spacer"></span>
         <select id="sort-need" class="sort-select" title="排序方式">
-          <option value="time">🕐 最新</option>
-          <option value="likes" selected>❤️ 点赞最多</option>
-          <option value="comments">💬 评论最多</option>
-          <option value="mine">🫵 我的</option>
+          <option value="time">最新发布</option>
+          <option value="likes" selected>最多关注</option>
+          <option value="comments">最多讨论</option>
+          <option value="mine">与我有关</option>
         </select>
-        <button id="btn-new-need" class="btn btn-primary">＋ 发布需求</button>
+        <button id="btn-new-need" class="btn btn-primary">发布需求</button>
       </div>
-      <p class="col-hint">想要什么插件，写在这里；想做的在卡片下留言认领，做完点「提交成果」。</p>
+      <p class="col-hint">说清使用场景，等待社区回应；看中哪个点子，也可以直接认领。</p>
       <div id="need-list" class="post-list"></div>
       <div id="empty-need" class="empty hidden">还没有需求，发一条让大家看看？</div>
     </section>
 
     <!-- 右栏：成果 -->
-    <section class="col">
+    <section class="col col-done">
       <div class="col-head">
-        <h2>🎁 成果</h2>
-        <span class="count" id="count-done">0</span>
+        <div class="col-title-group">
+          <span class="section-index">02</span>
+          <div>
+            <p class="section-kicker">MADE BY COMMUNITY</p>
+            <h2>成果展 <span class="count" id="count-done">0</span></h2>
+          </div>
+        </div>
         <span class="spacer"></span>
         <select id="sort-done" class="sort-select" title="排序方式">
-          <option value="time">🕐 最新</option>
-          <option value="likes" selected>❤️ 点赞最多</option>
-          <option value="comments">💬 评论最多</option>
-          <option value="mine">🫵 我的</option>
+          <option value="time">最新发布</option>
+          <option value="likes" selected>最多关注</option>
+          <option value="comments">最多讨论</option>
+          <option value="mine">与我有关</option>
         </select>
-        <button id="btn-new-done" class="btn btn-primary">＋ 发布成果</button>
+        <button id="btn-new-done" class="btn btn-primary">发布成果</button>
       </div>
-      <p class="col-hint">做好的插件，附上 GitHub 仓库和介绍；可回应左栏的需求。</p>
+      <p class="col-hint">浏览社区已经做出的插件与技能，打开详情即可查看仓库和使用说明。</p>
       <div id="done-list" class="post-list"></div>
       <div id="empty-done" class="empty hidden">还没有成果，做完记得来晒一个。</div>
     </section>
@@ -96,7 +138,7 @@
   <!-- 留言板视图 -->
   <section id="view-wall" class="hidden">
     <div class="col-head">
-      <h2>💬 留言板</h2>
+      <h2>社区留言</h2>
       <span class="count" id="count-wall">0</span>
       <span class="spacer"></span>
     </div>
@@ -330,7 +372,7 @@
 <div id="modal-detail" class="modal-mask hidden">
   <div class="modal modal-detail">
     <div class="modal-head">
-      <h2>详情</h2>
+      <h2 id="modal-detail-title">内容详情</h2>
       <button class="btn-close" data-close="modal-detail">✕</button>
     </div>
     <div id="detail-body"></div>

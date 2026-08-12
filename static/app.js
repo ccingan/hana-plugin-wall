@@ -9,6 +9,7 @@
     token: localStorage.getItem('hana_wall_token') || '',
     adminMode: false,
     view: 'home',
+    mobileType: 'need',
     fp: getFingerprint(),
     me: localStorage.getItem('hana_wall_me') || '',
     myQQ: '',
@@ -139,8 +140,19 @@
     openModal('modal-alert');
   }
 
-  function openModal(id) { $(`#${id}`).classList.remove('hidden'); }
-  function closeModal(id) { $(`#${id}`).classList.add('hidden'); }
+  function syncModalLock() {
+    document.body.classList.toggle('modal-open', !!document.querySelector('.modal-mask:not(.hidden)'));
+  }
+
+  function openModal(id) {
+    $(`#${id}`).classList.remove('hidden');
+    syncModalLock();
+  }
+
+  function closeModal(id) {
+    $(`#${id}`).classList.add('hidden');
+    syncModalLock();
+  }
 
   /* ---------- 浏览器指纹（防刷赞） ---------- */
 
@@ -432,9 +444,15 @@
       : '';
     return `
       <div class="comment-area" data-area="${post.id}">
+        <div class="discussion-head">
+          <div>
+            <span class="detail-kicker">DISCUSSION</span>
+            <h4>讨论与协作 <span>${comments.length}</span></h4>
+          </div>
+        </div>
         ${listHtml}
         <form class="comment-form" data-comment="${post.id}">
-          <textarea class="comment-text" rows="1" maxlength="200" placeholder="留言：我来做 / 有想法…（Enter 发送，Shift+Enter 换行）" required></textarea>
+          <textarea class="comment-text" rows="1" maxlength="200" placeholder="分享想法、补充信息，或告诉大家你愿意参与…" required></textarea>
           <button type="button" class="img-btn" data-img-insert-el title="插入图片链接，自动显示为图片">🖼</button>
           <button class="btn-small" type="submit">留言</button>
         </form>
@@ -446,32 +464,34 @@
     const date = String(post.created_at || '').slice(0, 10);
     return `
       <div class="card-meta">
-        <span class="author">🧑 ${esc(authorName(post))}</span>
+        <span class="author"><i class="avatar-dot"></i>${esc(authorName(post))}</span>
         <span class="spacer"></span>
         ${extraHtml || ''}
-        <span>${esc(date)}</span>
+        <time>${esc(date)}</time>
       </div>`;
   }
 
   function needStatusTag(post) {
     const st = needStatus(post);
-    if (st === 'done') return '<span class="status-tag done">✅ 已完成</span>';
-    if (st === 'doing') return '<span class="status-tag doing">🔨 ' + esc(post.claim.name) + ' 在做</span>';
-    return '';
+    if (st === 'done') return '<span class="status-tag done">已完成</span>';
+    if (st === 'doing') return '<span class="status-tag doing">' + esc(post.claim.name) + ' 制作中</span>';
+    return '<span class="status-tag open">等待认领</span>';
   }
 
   function sinkTag(post) {
-    return post.sunk ? '<span class="sink-tag">⬇ 已沉底</span>' : '';
+    return post.sunk ? '<span class="sink-tag">已沉底</span>' : '';
   }
 
   function needCard(post) {
     return `
       <article class="card need${post.sunk ? ' sunk' : ''}${versionCount(post) > 1 ? ' has-versions' : ''}" data-open-detail="${post.id}">
-        <h3 class="card-title">${esc(post.title)}${versionTag(post)}${isMine(post) ? ' <span class="mine-tag" title="你发布 / 认领 / 留言过的">🫵 我的</span>' : ''}${statusBadge(post)}</h3>
+        <div class="card-topline"><span class="card-kind">需求</span>${needStatusTag(post)}${sinkTag(post)}</div>
+        <h3 class="card-title">${esc(post.title)}${versionTag(post)}${isMine(post) ? ' <span class="mine-tag" title="你发布 / 认领 / 留言过的">与我有关</span>' : ''}${statusBadge(post)}</h3>
         <p class="card-excerpt">${renderText(post.content, { noImages: true })}</p>
-        ${cardMeta(post, needStatusTag(post) + sinkTag(post))}
+        ${cardMeta(post)}
         <div class="card-foot">
-          <span class="card-count">💬 ${(post.comments || []).length}</span>
+          <span class="card-count">${(post.comments || []).length} 条讨论</span>
+          <span class="card-more">查看详情 <b>→</b></span>
           ${likeBtn(post, true)}
         </div>
       </article>`;
@@ -480,11 +500,13 @@
   function doneCard(post) {
     return `
       <article class="card done${post.sunk ? ' sunk' : ''}${versionCount(post) > 1 ? ' has-versions' : ''}" data-open-detail="${post.id}">
-        <h3 class="card-title">${esc(post.title)}${versionTag(post)}${isMine(post) ? ' <span class="mine-tag" title="你发布 / 认领 / 留言过的">🫵 我的</span>' : ''}${statusBadge(post)}</h3>
+        <div class="card-topline"><span class="card-kind">成果</span>${sinkTag(post)}${post.github ? '<span class="repo-available">含代码仓库</span>' : ''}</div>
+        <h3 class="card-title">${esc(post.title)}${versionTag(post)}${isMine(post) ? ' <span class="mine-tag" title="你发布 / 认领 / 留言过的">与我有关</span>' : ''}${statusBadge(post)}</h3>
         <p class="card-excerpt">${renderText(post.content, { noImages: true })}</p>
-        ${cardMeta(post, sinkTag(post))}
+        ${cardMeta(post)}
         <div class="card-foot">
-          <span class="card-count">💬 ${(post.comments || []).length}</span>
+          <span class="card-count">${(post.comments || []).length} 条讨论</span>
+          <span class="card-more">查看详情 <b>→</b></span>
           ${likeBtn(post, true)}
         </div>
       </article>`;
@@ -496,6 +518,7 @@
     state.detailId = id;
     state.detailVer = null;  // 打开详情默认显示最新版
     const isDone = post.type === 'done';
+    $('#modal-detail-title').textContent = isDone ? '成果详情' : '需求详情';
     const replyTo = isDone ? state.posts.find((p) => p.id === post.reply_to) : null;
     const replyHtml = replyTo ? `
       <div class="reply-box">
@@ -530,11 +553,13 @@
       : `<div class="ver-hint">📜 正在查看历史版本 v${(state.detailVer || 0) + 1}（${esc(shown.at || '')}），点赞与评论属于整个卡片。切换到最新版可查看当前内容。</div>`;
     const head = isDone ? `
       <div class="post-head">
+        <span class="detail-type done">社区成果</span>
         <h3 class="post-title">${esc(shown.title)}</h3>
-        ${shown.github ? `<button type="button" class="repo-copy" data-copy-repo="${post.id}" title="复制仓库名，粘贴给智能体即可安装">📋 复制仓库名</button>
-        <a class="repo-link" href="${esc(githubUrl(shown.github))}" target="_blank" rel="noopener noreferrer">GitHub ↗</a>` : ''}
+        ${shown.github ? `<div class="repo-actions"><button type="button" class="repo-copy" data-copy-repo="${post.id}" title="复制仓库名，粘贴给智能体即可安装">复制仓库名</button>
+        <a class="repo-link" href="${esc(githubUrl(shown.github))}" target="_blank" rel="noopener noreferrer">打开 GitHub ↗</a></div>` : ''}
       </div>` : `
       <div class="post-head">
+        <span class="detail-type need">社区需求</span>
         <h3 class="post-title">${esc(shown.title)}</h3>
       </div>`;
     const sunkHtml = post.sunk ? '<div class="reply-box sink-box">⬇ 该卡片已被管理员沉底，内容仅供参考</div>' : '';
@@ -551,19 +576,22 @@
     $('#detail-body').innerHTML = `
       <article class="post ${isDone ? 'done' : 'need'}${post.sunk ? ' sunk' : ''}" data-pid="${post.id}">
         ${head}
+        <div class="post-meta detail-meta">
+          <span class="group">${esc(post.group)}</span>
+          <span>发布者 ${esc(authorName(post))}</span>
+          ${shown.contact ? `<span>联系方式 ${esc(shown.contact)}</span>` : ''}
+          <span>${esc(shown.at)}</span>
+        </div>
         ${verSwitcher}
         ${verHint}
-        <p class="post-content">${renderText(shown.content)}</p>
-        <div class="post-meta">
-          <span class="group">👥 ${esc(post.group)}</span>
-          <span>🧑 ${esc(authorName(post))}</span>
-          ${shown.contact ? `<span>📮 ${esc(shown.contact)}</span>` : ''}
-          <span>🕐 ${esc(shown.at)}</span>
-        </div>
         ${sunkHtml}
         ${stHtml}
         ${statusHtml}
         ${replyHtml}
+        <div class="detail-content-block">
+          <span class="detail-kicker">ABOUT</span>
+          <p class="post-content">${renderText(shown.content)}</p>
+        </div>
         ${commentAreaHtml(post, state.expandedComments.has(id))}
         <div class="post-actions">
           ${actions}
@@ -593,7 +621,9 @@
     if (q) {
       out = out.filter((p) =>
         String(p.title || '').toLowerCase().indexOf(q) !== -1 ||
-        String(p.content || '').toLowerCase().indexOf(q) !== -1);
+        String(p.content || '').toLowerCase().indexOf(q) !== -1 ||
+        String(p.author || '').toLowerCase().indexOf(q) !== -1 ||
+        String(p.github || '').toLowerCase().indexOf(q) !== -1);
     }
     out = out.slice();
     if (sortKey === 'likes') {
@@ -624,9 +654,8 @@
     if (listEl.offsetParent === null) return;
     listEl.innerHTML = '';
     if (!cards.length) return;
-    const narrow = window.matchMedia && window.matchMedia('(max-width: 880px)').matches;
     const cols = [];
-    for (let i = 0; i < (narrow ? 1 : 2); i++) {
+    for (let i = 0; i < 1; i++) {
       const c = document.createElement('div');
       c.className = 'masonry-col';
       listEl.appendChild(c);
@@ -650,6 +679,10 @@
 
     $('#count-need').textContent = needs.length;
     $('#count-done').textContent = dones.length;
+    $('#mobile-count-need').textContent = needs.length;
+    $('#mobile-count-done').textContent = dones.length;
+    $('#hero-need-count').textContent = state.posts.filter((p) => p.type === 'need' && needStatus(p) !== 'done').length;
+    $('#hero-done-count').textContent = state.posts.filter((p) => p.type === 'done').length;
 
     $('#sort-need').value = state.sortNeed;
     $('#sort-done').value = state.sortDone;
@@ -1816,6 +1849,18 @@
   on('#tab-home', 'click', () => switchView('home'));
   on('#tab-wall', 'click', () => switchView('wall'));
 
+  function switchMobileType(type) {
+    state.mobileType = type === 'done' ? 'done' : 'need';
+    $('.col-need').classList.toggle('mobile-active', state.mobileType === 'need');
+    $('.col-done').classList.toggle('mobile-active', state.mobileType === 'done');
+    $('#mobile-show-needs').classList.toggle('active', state.mobileType === 'need');
+    $('#mobile-show-dones').classList.toggle('active', state.mobileType === 'done');
+    render();
+  }
+
+  on('#mobile-show-needs', 'click', () => switchMobileType('need'));
+  on('#mobile-show-dones', 'click', () => switchMobileType('done'));
+
   on('#search-input', 'input', (e) => {
     state.query = e.target.value;
     render();
@@ -1936,12 +1981,14 @@
       const sel = window.getSelection();
       if (sel && sel.toString().trim()) return; // 有选中文字时不关闭
       m.classList.add('hidden');
+      syncModalLock();
     });
   });
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       document.querySelectorAll('.modal-mask').forEach((m) => m.classList.add('hidden'));
+      syncModalLock();
     }
   });
 
