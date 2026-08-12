@@ -20,6 +20,8 @@
     sortNeed: loadSort('hana_wall_sort_need'),
     sortDone: loadSort('hana_wall_sort_done'),
     query: '',
+    pageNeed: 1,
+    pageDone: 1,
     announcement: null,
     pendingCount: 0,
     pendingItems: [],
@@ -52,6 +54,7 @@
   }
 
   const $ = (sel) => document.querySelector(sel);
+  const PAGE_SIZE = 6;
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({
@@ -648,6 +651,58 @@
     return out.filter((p) => !p.sunk).concat(out.filter((p) => p.sunk));
   }
 
+  function paginate(items, currentPage) {
+    const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+    const page = Math.min(Math.max(1, currentPage), totalPages);
+    const start = (page - 1) * PAGE_SIZE;
+    return {
+      items: items.slice(start, start + PAGE_SIZE),
+      page,
+      total: items.length,
+      totalPages,
+    };
+  }
+
+  function paginationSequence(page, totalPages) {
+    if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    const visible = Array.from(new Set([1, totalPages, page - 1, page, page + 1]))
+      .filter((n) => n >= 1 && n <= totalPages)
+      .sort((a, b) => a - b);
+    const sequence = [];
+    visible.forEach((n, i) => {
+      if (i && n - visible[i - 1] > 1) sequence.push('ellipsis-' + n);
+      sequence.push(n);
+    });
+    return sequence;
+  }
+
+  function renderPagination(type, result) {
+    const el = $('#pagination-' + type);
+    const label = type === 'need' ? '需求' : '成果';
+    const hidden = result.totalPages <= 1;
+    el.classList.toggle('hidden', hidden);
+    if (hidden) {
+      el.innerHTML = '';
+      return;
+    }
+    const pageButtons = paginationSequence(result.page, result.totalPages).map((item) => {
+      if (typeof item !== 'number') return '<span class="page-ellipsis" aria-hidden="true">…</span>';
+      const active = item === result.page;
+      return `<button type="button" class="page-btn page-number${active ? ' active' : ''}" ` +
+        `data-page-type="${type}" data-page-value="${item}" ` +
+        `${active ? 'aria-current="page"' : ''} aria-label="${label}第 ${item} 页">${item}</button>`;
+    }).join('');
+    el.innerHTML = `
+      <span class="pagination-summary" aria-live="polite">${result.total} 条 · 第 ${result.page}/${result.totalPages} 页</span>
+      <div class="pagination-controls">
+        <button type="button" class="page-btn page-nav" data-page-type="${type}" data-page-value="${result.page - 1}"
+          ${result.page === 1 ? 'disabled' : ''} aria-label="${label}上一页">← <span>上一页</span></button>
+        <div class="page-numbers">${pageButtons}</div>
+        <button type="button" class="page-btn page-nav" data-page-type="${type}" data-page-value="${result.page + 1}"
+          ${result.page === result.totalPages ? 'disabled' : ''} aria-label="${label}下一页"><span>下一页</span> →</button>
+      </div>`;
+  }
+
   /* 瀑布流：最短列优先分配。每张卡放入当前更矮的那列（渲染后测量高度），
      视觉上从页面顶部往下看，卡片大体按排名顺序出现；同水平左侧优先。 */
   function fillList(listEl, cards, cardHtml) {
@@ -676,6 +731,10 @@
       state.posts.filter((p) => p.type === 'need'), state.sortNeed, needStatus);
     const dones = filterAndSort(
       state.posts.filter((p) => p.type === 'done'), state.sortDone);
+    const needPage = paginate(needs, state.pageNeed);
+    const donePage = paginate(dones, state.pageDone);
+    state.pageNeed = needPage.page;
+    state.pageDone = donePage.page;
 
     $('#count-need').textContent = needs.length;
     $('#count-done').textContent = dones.length;
@@ -688,8 +747,10 @@
     $('#sort-done').value = state.sortDone;
 
     if (state.view === 'home') {
-      fillList($('#need-list'), needs, needCard);
-      fillList($('#done-list'), dones, doneCard);
+      fillList($('#need-list'), needPage.items, needCard);
+      fillList($('#done-list'), donePage.items, doneCard);
+      renderPagination('need', needPage);
+      renderPagination('done', donePage);
     } else if (state.view === 'wall') {
       renderWall();
     }
@@ -1850,7 +1911,12 @@
   on('#tab-wall', 'click', () => switchView('wall'));
 
   function switchMobileType(type) {
-    state.mobileType = type === 'done' ? 'done' : 'need';
+    const nextType = type === 'done' ? 'done' : 'need';
+    if (nextType !== state.mobileType) {
+      if (nextType === 'done') state.pageDone = 1;
+      else state.pageNeed = 1;
+    }
+    state.mobileType = nextType;
     $('.col-need').classList.toggle('mobile-active', state.mobileType === 'need');
     $('.col-done').classList.toggle('mobile-active', state.mobileType === 'done');
     $('#mobile-show-needs').classList.toggle('active', state.mobileType === 'need');
@@ -1863,17 +1929,39 @@
 
   on('#search-input', 'input', (e) => {
     state.query = e.target.value;
+    state.pageNeed = 1;
+    state.pageDone = 1;
     render();
   });
   on('#sort-need', 'change', (e) => {
     state.sortNeed = e.target.value;
+    state.pageNeed = 1;
     localStorage.setItem('hana_wall_sort_need', state.sortNeed);
     render();
   });
   on('#sort-done', 'change', (e) => {
     state.sortDone = e.target.value;
+    state.pageDone = 1;
     localStorage.setItem('hana_wall_sort_done', state.sortDone);
     render();
+  });
+
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-page-type][data-page-value]');
+    if (!btn || btn.disabled) return;
+    const type = btn.dataset.pageType === 'done' ? 'done' : 'need';
+    const nextPage = Number(btn.dataset.pageValue);
+    const key = type === 'done' ? 'pageDone' : 'pageNeed';
+    if (!Number.isFinite(nextPage) || nextPage < 1 || nextPage === state[key]) return;
+    state[key] = nextPage;
+    render();
+    requestAnimationFrame(() => {
+      const section = $('.col-' + type);
+      if (!section) return;
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const top = section.getBoundingClientRect().top + window.scrollY - 84;
+      window.scrollTo({ top: Math.max(0, top), behavior: reduced ? 'auto' : 'smooth' });
+    });
   });
 
   on('#btn-name', 'click', openNameModal);

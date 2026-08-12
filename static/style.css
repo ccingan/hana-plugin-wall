@@ -1706,6 +1706,41 @@ main { max-width: 1320px; padding: 32px 28px 64px; }
 
 .post-list { display: block; }
 .masonry-col + .masonry-col { margin-left: 0; }
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 4px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.pagination-summary { color: var(--text-dim); font-size: 11px; white-space: nowrap; }
+.pagination-controls, .page-numbers { display: flex; align-items: center; gap: 5px; }
+.page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: border-color .18s ease, background .18s ease, color .18s ease, transform .18s ease;
+}
+.page-btn:hover:not(:disabled) { border-color: #b8bcb5; color: var(--text); transform: translateY(-1px); }
+.page-btn:focus-visible { outline: 3px solid rgba(78,88,201,.18); outline-offset: 2px; }
+.page-btn:disabled { cursor: not-allowed; opacity: .38; }
+.page-btn.active { border-color: var(--need); background: var(--need); color: #fff; }
+.col-done .page-btn.active { border-color: var(--done); background: var(--done); }
+.page-nav { gap: 5px; }
+.page-ellipsis { display: grid; place-items: center; width: 20px; height: 38px; color: var(--text-dim); }
 .card {
   position: relative;
   margin-bottom: 12px;
@@ -1924,6 +1959,11 @@ footer { padding: 28px; color: #8b8f97; }
   .section-index { width: 34px; height: 34px; flex-basis: 34px; }
   .col-head h2 { font-size: 17px; }
   .col-hint { min-height: 0; }
+  .pagination { flex-direction: column; align-items: stretch; gap: 10px; }
+  .pagination-summary { text-align: center; }
+  .pagination-controls { justify-content: center; }
+  .page-btn { min-width: 44px; height: 44px; }
+  .page-numbers .page-btn:not(.active), .page-numbers .page-ellipsis { display: none; }
   .card { padding: 17px 17px 14px; border-radius: 15px; }
   .card-title { font-size: 16px; }
   .card-excerpt { -webkit-line-clamp: 3; }
