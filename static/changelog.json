@@ -1,10 +1,11 @@
 {
-  "updated_at": "2026-08-13 13:29",
-  "last_commit": "4bd2da711c405e3048c7b7ebc07e8b6cfcf8abe0",
+  "updated_at": "2026-08-13 13:37",
+  "last_commit": "a8fc41f2ea824fdb25e515b813ab267efb154261",
   "groups": [
     {
       "date": "2026-08-13",
       "items": [
+        "fix: 暗色模式补齐 header/沉底卡/版本纸片/主按钮/toast 的夜间配色",
         "feat: 主题手动三态切换（跟随系统/亮/暗）+ hero 大卡固定深色",
         "feat: 暗色模式（跟随系统）+ 回应卡片跳转链接 + 修复历史版本切换失效",
         "feat: 为需求池和成果展添加独立分页",
