@@ -3,11 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f3f4f1">
-<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#14161b">
+<meta name="theme-color" id="meta-theme-color" content="#f3f4f1">
 <title>Hana 插件墙 · 社区共创广场</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🌸%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/static/style.css">
+<script>
+/* 主题三态：auto 跟随系统 / light 强制亮 / dark 强制暗。放在 head 尽早生效，避免加载时闪白 */
+(function () {
+  var t = 'auto';
+  try { t = localStorage.getItem('hw_theme') || 'auto'; } catch (e) {}
+  var dark = t === 'dark' || (t === 'auto' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  window.__hwTheme = t;
+})();
+</script>
 </head>
 <body>
 
@@ -27,6 +36,7 @@
       <button id="btn-identity" class="btn btn-outline admin-entry hidden" title="重置用户密码、授予/撤销管理员">🔧 账号管理</button>
       <button id="btn-logs" class="btn btn-outline admin-entry hidden" title="查看操作日志">📜 日志</button>
       <button id="btn-changelog" class="btn btn-outline admin-entry hidden" title="查看版本更新记录">🆕 更新日志</button>
+      <button id="btn-theme" class="btn btn-outline theme-btn" title="主题：跟随系统（点击切换为亮色）">🌓</button>
       <button id="btn-admin" class="btn btn-outline admin-entry" title="进入管理模式">⚙ 管理</button>
       <button id="btn-name" class="btn btn-outline name-btn" title="登录后可以发帖、留言和点赞">👤 未登录</button>
     </div>

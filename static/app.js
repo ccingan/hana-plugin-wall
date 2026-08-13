@@ -1895,6 +1895,41 @@
   on('#tab-dones', 'click', () => switchView('dones'));
   on('#tab-wall', 'click', () => switchView('wall'));
 
+  /* ---------- 主题三态切换：auto 跟随系统 / light 亮 / dark 暗（记住选择） ---------- */
+  const THEME_STEPS = ['auto', 'light', 'dark'];
+  const THEME_ICON = { auto: '🌓', light: '☀️', dark: '🌙' };
+  const THEME_NAME = { auto: '跟随系统', light: '亮色', dark: '暗色' };
+  let themeMode = (window.__hwTheme === 'light' || window.__hwTheme === 'dark') ? window.__hwTheme : 'auto';
+
+  function themeIsDark() {
+    return themeMode === 'dark' || (themeMode === 'auto' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  }
+  function applyTheme() {
+    const dark = themeIsDark();
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    const btn = $('#btn-theme');
+    if (btn) {
+      btn.textContent = THEME_ICON[themeMode];
+      btn.title = '主题：' + THEME_NAME[themeMode] + '（点击切换为' +
+        (themeMode === 'auto' ? '亮色' : themeMode === 'light' ? '暗色' : '跟随系统') + '）';
+    }
+    const meta = $('#meta-theme-color');
+    if (meta) meta.setAttribute('content', dark ? '#14161b' : '#f3f4f1');
+    try { localStorage.setItem('hw_theme', themeMode); } catch (e) {}
+  }
+  on('#btn-theme', 'click', () => {
+    const idx = (THEME_STEPS.indexOf(themeMode) + 1) % THEME_STEPS.length;
+    themeMode = THEME_STEPS[idx];
+    applyTheme();
+    toast('主题已切换：' + THEME_NAME[themeMode] + (themeMode === 'auto' ? '（跟随系统设置）' : ''));
+  });
+  /* 跟随系统模式下，系统切换深色时页面自动跟随 */
+  const mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+  if (mq && mq.addListener) {
+    mq.addListener(() => { if (themeMode === 'auto') applyTheme(); });
+  }
+  applyTheme();
+
   on('#search-input', 'input', (e) => {
     if (state.view === 'dones') state.queryDone = e.target.value;
     else state.queryNeed = e.target.value;
