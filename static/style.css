@@ -2075,5 +2075,19 @@ html[data-theme="dark"] .hero {
     #0e1116;
   box-shadow: 0 24px 70px rgba(0,0,0,.45);
 }
+html[data-theme="dark"] header {
+  background: rgba(30, 34, 41, .88);
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+html[data-theme="dark"] .card.sunk {
+  background: #232830;
+  border-top-color: #4a515c !important;
+}
+html[data-theme="dark"] .card.has-versions::after { background: var(--card-soft); }
+html[data-theme="dark"] .btn-primary { background: var(--ink); color: #14161b; box-shadow: 0 8px 20px rgba(0,0,0,.3); }
+html[data-theme="dark"] .btn-primary:hover { background: #c9ccd1; box-shadow: 0 11px 24px rgba(0,0,0,.36); }
+html[data-theme="dark"] .col-need .btn-primary { background: var(--need); color: #fff; }
+html[data-theme="dark"] .col-done .btn-primary { background: var(--done); color: #fff; }
+html[data-theme="dark"] .toast { color: #14161b; }
 html[data-theme="dark"] .theme-btn { background: var(--card); }
 html[data-theme="dark"] .theme-btn:hover { background: var(--card-soft); }
