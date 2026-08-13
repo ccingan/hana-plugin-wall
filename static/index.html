@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f3f4f1">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#14161b">
 <title>Hana 插件墙 · 社区共创广场</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🌸%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/static/style.css">
@@ -54,9 +56,10 @@
   </section>
 
   <div class="top-row">
-    <nav class="tabs">
-      <button id="tab-home" class="tab active">探索广场</button>
-      <button id="tab-wall" class="tab">社区留言</button>
+    <nav class="tabs" role="tablist" aria-label="插件墙内容导航">
+      <button id="tab-needs" class="tab active" role="tab" aria-selected="true" aria-controls="view-needs">需求池 <span id="tab-count-need">0</span></button>
+      <button id="tab-dones" class="tab" role="tab" aria-selected="false" aria-controls="view-dones">成果展 <span id="tab-count-done">0</span></button>
+      <button id="tab-wall" class="tab" role="tab" aria-selected="false" aria-controls="view-wall">社区留言</button>
     </nav>
 
     <div id="announcement-bar" class="announcement-bar hidden">
@@ -66,26 +69,19 @@
     </div>
   </div>
 
-  <div class="explore-tools">
+  <div id="explore-tools" class="explore-tools">
     <div class="explore-intro">
-      <span class="explore-kicker">EXPLORE</span>
-      <strong>现在，想找点什么？</strong>
+      <span id="explore-kicker" class="explore-kicker">IDEAS WANTED</span>
+      <strong id="explore-heading">有哪些想法，正在等人实现？</strong>
     </div>
     <div class="search-bar">
       <span class="search-icon" aria-hidden="true">⌕</span>
-      <input id="search-input" type="search" placeholder="搜索标题、内容、作者或仓库…" autocomplete="off">
+      <input id="search-input" type="search" placeholder="搜索需求标题、场景或发布者…" autocomplete="off">
     </div>
   </div>
 
-  <div id="view-home">
-  <div class="mobile-type-switch" aria-label="内容类型切换">
-    <button id="mobile-show-needs" class="mobile-type-btn active" type="button">需求 <span id="mobile-count-need">0</span></button>
-    <button id="mobile-show-dones" class="mobile-type-btn" type="button">成果 <span id="mobile-count-done">0</span></button>
-  </div>
-  <div class="columns">
-
-    <!-- 左栏：需求 / 委托 -->
-    <section class="col col-need mobile-active">
+  <div id="view-needs" class="content-view" role="tabpanel" aria-labelledby="tab-needs">
+    <section class="col col-need">
       <div class="col-head">
         <div class="col-title-group">
           <span class="section-index">01</span>
@@ -106,10 +102,10 @@
       <p class="col-hint">说清使用场景，等待社区回应；看中哪个点子，也可以直接认领。</p>
       <div id="need-list" class="post-list"></div>
       <div id="empty-need" class="empty hidden">还没有需求，发一条让大家看看？</div>
-      <nav id="pagination-need" class="pagination hidden" aria-label="需求池分页"></nav>
     </section>
+  </div>
 
-    <!-- 右栏：成果 -->
+  <div id="view-dones" class="content-view hidden" role="tabpanel" aria-labelledby="tab-dones">
     <section class="col col-done">
       <div class="col-head">
         <div class="col-title-group">
@@ -131,14 +127,11 @@
       <p class="col-hint">浏览社区已经做出的插件与技能，打开详情即可查看仓库和使用说明。</p>
       <div id="done-list" class="post-list"></div>
       <div id="empty-done" class="empty hidden">还没有成果，做完记得来晒一个。</div>
-      <nav id="pagination-done" class="pagination hidden" aria-label="成果展分页"></nav>
     </section>
-
-  </div>
   </div>
 
   <!-- 留言板视图 -->
-  <section id="view-wall" class="hidden">
+  <section id="view-wall" class="content-view hidden" role="tabpanel" aria-labelledby="tab-wall">
     <div class="col-head">
       <h2>社区留言</h2>
       <span class="count" id="count-wall">0</span>

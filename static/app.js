@@ -8,8 +8,7 @@
     editId: null,
     token: localStorage.getItem('hana_wall_token') || '',
     adminMode: false,
-    view: 'home',
-    mobileType: 'need',
+    view: 'needs',
     fp: getFingerprint(),
     me: localStorage.getItem('hana_wall_me') || '',
     myQQ: '',
@@ -19,9 +18,8 @@
     wallReply: { cid: null, name: '' },
     sortNeed: loadSort('hana_wall_sort_need'),
     sortDone: loadSort('hana_wall_sort_done'),
-    query: '',
-    pageNeed: 1,
-    pageDone: 1,
+    queryNeed: '',
+    queryDone: '',
     announcement: null,
     pendingCount: 0,
     pendingItems: [],
@@ -54,7 +52,6 @@
   }
 
   const $ = (sel) => document.querySelector(sel);
-  const PAGE_SIZE = 6;
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({
@@ -210,13 +207,32 @@
   /* ---------- 视图切换 ---------- */
 
   function switchView(v) {
-    state.view = v;
-    $('#view-home').classList.toggle('hidden', v !== 'home');
-    $('#view-wall').classList.toggle('hidden', v !== 'wall');
-    $('#tab-home').classList.toggle('active', v === 'home');
-    $('#tab-wall').classList.toggle('active', v === 'wall');
-    if (v === 'home') render();
-    if (v === 'wall') renderWall();
+    state.view = v === 'dones' || v === 'wall' ? v : 'needs';
+    $('#view-needs').classList.toggle('hidden', state.view !== 'needs');
+    $('#view-dones').classList.toggle('hidden', state.view !== 'dones');
+    $('#view-wall').classList.toggle('hidden', state.view !== 'wall');
+    ['needs', 'dones', 'wall'].forEach((name) => {
+      const tab = $('#tab-' + name);
+      const active = state.view === name;
+      tab.classList.toggle('active', active);
+      tab.setAttribute('aria-selected', String(active));
+    });
+    $('#explore-tools').classList.toggle('hidden', state.view === 'wall');
+    if (state.view === 'needs') {
+      $('#explore-kicker').textContent = 'IDEAS WANTED';
+      $('#explore-heading').textContent = '有哪些想法，正在等人实现？';
+      $('#search-input').placeholder = '搜索需求标题、场景或发布者…';
+      $('#search-input').value = state.queryNeed;
+      render();
+    } else if (state.view === 'dones') {
+      $('#explore-kicker').textContent = 'MADE BY COMMUNITY';
+      $('#explore-heading').textContent = '看看社区，最近做出了什么？';
+      $('#search-input').placeholder = '搜索成果标题、作者或代码仓库…';
+      $('#search-input').value = state.queryDone;
+      render();
+    } else {
+      renderWall();
+    }
   }
 
   /* ---------- 加载与渲染 ---------- */
@@ -485,30 +501,39 @@
     return post.sunk ? '<span class="sink-tag">已沉底</span>' : '';
   }
 
-  function needCard(post) {
+  function needCard(post, rank) {
+    const donePost = state.posts.find((p) => p.type === 'done' && p.reply_to === post.id);
+    const gotoBtn = needStatus(post) === 'done' && donePost
+      ? `<button type="button" class="card-goto" data-goto-detail="${donePost.id}" title="查看回应此需求的成果卡片">查看回应成果 #${donePost.id} →</button>`
+      : '';
     return `
-      <article class="card need${post.sunk ? ' sunk' : ''}${versionCount(post) > 1 ? ' has-versions' : ''}" data-open-detail="${post.id}">
-        <div class="card-topline"><span class="card-kind">需求</span>${needStatusTag(post)}${sinkTag(post)}</div>
+      <article class="card need${post.sunk ? ' sunk' : ''}${versionCount(post) > 1 ? ' has-versions' : ''}" data-open-detail="${post.id}" tabindex="0" aria-label="打开需求详情：${esc(post.title)}">
+        <div class="card-topline"><span class="card-kind">需求</span>${needStatusTag(post)}${sinkTag(post)}<span class="card-rank">#${String(rank + 1).padStart(2, '0')}</span></div>
         <h3 class="card-title">${esc(post.title)}${versionTag(post)}${isMine(post) ? ' <span class="mine-tag" title="你发布 / 认领 / 留言过的">与我有关</span>' : ''}${statusBadge(post)}</h3>
         <p class="card-excerpt">${renderText(post.content, { noImages: true })}</p>
         ${cardMeta(post)}
         <div class="card-foot">
-          <span class="card-count">${(post.comments || []).length} 条讨论</span>
+          ${gotoBtn}
+          <span class="card-count"><b>讨论</b> ${(post.comments || []).length}</span>
           <span class="card-more">查看详情 <b>→</b></span>
           ${likeBtn(post, true)}
         </div>
       </article>`;
   }
 
-  function doneCard(post) {
+  function doneCard(post, rank) {
+    const gotoBtn = post.reply_to
+      ? `<button type="button" class="card-goto" data-goto-detail="${post.reply_to}" title="查看此成果回应的需求卡片">← 回应需求 #${post.reply_to}</button>`
+      : '';
     return `
-      <article class="card done${post.sunk ? ' sunk' : ''}${versionCount(post) > 1 ? ' has-versions' : ''}" data-open-detail="${post.id}">
-        <div class="card-topline"><span class="card-kind">成果</span>${sinkTag(post)}${post.github ? '<span class="repo-available">含代码仓库</span>' : ''}</div>
+      <article class="card done${post.sunk ? ' sunk' : ''}${versionCount(post) > 1 ? ' has-versions' : ''}" data-open-detail="${post.id}" tabindex="0" aria-label="打开成果详情：${esc(post.title)}">
+        <div class="card-topline"><span class="card-kind">成果</span>${sinkTag(post)}${post.github ? '<span class="repo-available">代码仓库 ↗</span>' : ''}<span class="card-rank">#${String(rank + 1).padStart(2, '0')}</span></div>
         <h3 class="card-title">${esc(post.title)}${versionTag(post)}${isMine(post) ? ' <span class="mine-tag" title="你发布 / 认领 / 留言过的">与我有关</span>' : ''}${statusBadge(post)}</h3>
         <p class="card-excerpt">${renderText(post.content, { noImages: true })}</p>
         ${cardMeta(post)}
         <div class="card-foot">
-          <span class="card-count">${(post.comments || []).length} 条讨论</span>
+          ${gotoBtn}
+          <span class="card-count"><b>讨论</b> ${(post.comments || []).length}</span>
           <span class="card-more">查看详情 <b>→</b></span>
           ${likeBtn(post, true)}
         </div>
@@ -519,13 +544,13 @@
     const post = state.posts.find((p) => p.id === id);
     if (!post) return;
     state.detailId = id;
-    state.detailVer = null;  // 打开详情默认显示最新版
     const isDone = post.type === 'done';
     $('#modal-detail-title').textContent = isDone ? '成果详情' : '需求详情';
     const replyTo = isDone ? state.posts.find((p) => p.id === post.reply_to) : null;
     const replyHtml = replyTo ? `
       <div class="reply-box">
         📋 响应需求 #${replyTo.id}「<span class="reply-need">${esc(replyTo.title)}</span>」
+        <button type="button" class="reply-link-btn" data-goto-detail="${replyTo.id}">查看需求详情 ←</button>
       </div>` : '';
     let statusHtml = '';
     let claimBtn = '';
@@ -533,7 +558,9 @@
       const st = needStatus(post);
       if (st === 'done') {
         const donePost = state.posts.find((p) => p.type === 'done' && p.reply_to === post.id);
-        statusHtml = `<div class="reply-box">✅ 已完成，由成果「<span class="reply-need">${donePost ? esc(donePost.title) : ''}</span>」回应</div>`;
+        statusHtml = `<div class="reply-box">✅ 已完成，由成果「<span class="reply-need">${donePost ? esc(donePost.title) : ''}</span>」回应
+          ${donePost ? `<button type="button" class="reply-link-btn" data-goto-detail="${donePost.id}">查看成果详情 →</button>` : ''}
+        </div>`;
       } else if (st === 'doing') {
         const mine = post.claim && post.claim.fp === state.fp;
         statusHtml = `<div class="reply-box">🔨 认领中：<span class="reply-need">${esc(post.claim.name)}</span> 正在做（${esc(post.claim.time)}）</div>`;
@@ -580,6 +607,7 @@
       <article class="post ${isDone ? 'done' : 'need'}${post.sunk ? ' sunk' : ''}" data-pid="${post.id}">
         ${head}
         <div class="post-meta detail-meta">
+          <span class="card-id" title="卡片唯一 ID，沟通时可用它指认卡片">#${post.id}</span>
           <span class="group">${esc(post.group)}</span>
           <span>发布者 ${esc(authorName(post))}</span>
           ${shown.contact ? `<span>联系方式 ${esc(shown.contact)}</span>` : ''}
@@ -606,6 +634,12 @@
     openModal('modal-detail');
   }
 
+  /* 打开详情（新打开时默认看最新版；renderDetail 本身保留当前版本状态，供版本切换/评论刷新复用） */
+  function openDetail(id) {
+    state.detailVer = null;
+    renderDetail(id);
+  }
+
   /* "我的"判定：我发的（按昵称，改名后失配）/ 我认领的（设备指纹）/ 我留言过的（设备指纹） */
   function isMine(post) {
     if (state.me && post.author === state.me) return true;
@@ -618,9 +652,9 @@
     return !!post.owner_qq && state.myQQ && post.owner_qq === state.myQQ;
   }
 
-  function filterAndSort(list, sortKey, statusFn) {
+  function filterAndSort(list, sortKey, statusFn, query) {
     let out = list;
-    const q = state.query.trim().toLowerCase();
+    const q = String(query || '').trim().toLowerCase();
     if (q) {
       out = out.filter((p) =>
         String(p.title || '').toLowerCase().indexOf(q) !== -1 ||
@@ -651,111 +685,61 @@
     return out.filter((p) => !p.sunk).concat(out.filter((p) => p.sunk));
   }
 
-  function paginate(items, currentPage) {
-    const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
-    const page = Math.min(Math.max(1, currentPage), totalPages);
-    const start = (page - 1) * PAGE_SIZE;
-    return {
-      items: items.slice(start, start + PAGE_SIZE),
-      page,
-      total: items.length,
-      totalPages,
-    };
+  function masonryColumnCount(listEl) {
+    const width = listEl.clientWidth;
+    if (width >= 1020) return 3;
+    if (width >= 620) return 2;
+    return 1;
   }
 
-  function paginationSequence(page, totalPages) {
-    if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i + 1);
-    const visible = Array.from(new Set([1, totalPages, page - 1, page, page + 1]))
-      .filter((n) => n >= 1 && n <= totalPages)
-      .sort((a, b) => a - b);
-    const sequence = [];
-    visible.forEach((n, i) => {
-      if (i && n - visible[i - 1] > 1) sequence.push('ellipsis-' + n);
-      sequence.push(n);
-    });
-    return sequence;
-  }
-
-  function renderPagination(type, result) {
-    const el = $('#pagination-' + type);
-    const label = type === 'need' ? '需求' : '成果';
-    const hidden = result.totalPages <= 1;
-    el.classList.toggle('hidden', hidden);
-    if (hidden) {
-      el.innerHTML = '';
-      return;
-    }
-    const pageButtons = paginationSequence(result.page, result.totalPages).map((item) => {
-      if (typeof item !== 'number') return '<span class="page-ellipsis" aria-hidden="true">…</span>';
-      const active = item === result.page;
-      return `<button type="button" class="page-btn page-number${active ? ' active' : ''}" ` +
-        `data-page-type="${type}" data-page-value="${item}" ` +
-        `${active ? 'aria-current="page"' : ''} aria-label="${label}第 ${item} 页">${item}</button>`;
-    }).join('');
-    el.innerHTML = `
-      <span class="pagination-summary" aria-live="polite">${result.total} 条 · 第 ${result.page}/${result.totalPages} 页</span>
-      <div class="pagination-controls">
-        <button type="button" class="page-btn page-nav" data-page-type="${type}" data-page-value="${result.page - 1}"
-          ${result.page === 1 ? 'disabled' : ''} aria-label="${label}上一页">← <span>上一页</span></button>
-        <div class="page-numbers">${pageButtons}</div>
-        <button type="button" class="page-btn page-nav" data-page-type="${type}" data-page-value="${result.page + 1}"
-          ${result.page === result.totalPages ? 'disabled' : ''} aria-label="${label}下一页"><span>下一页</span> →</button>
-      </div>`;
-  }
-
-  /* 瀑布流：最短列优先分配。每张卡放入当前更矮的那列（渲染后测量高度），
-     视觉上从页面顶部往下看，卡片大体按排名顺序出现；同水平左侧优先。 */
+  /* 瀑布流：按内容区宽度建立 3 / 2 / 1 列，每张卡放进当前最短列。 */
   function fillList(listEl, cards, cardHtml) {
     if (listEl.offsetParent === null) return;
     listEl.innerHTML = '';
     if (!cards.length) return;
+    const columnCount = masonryColumnCount(listEl);
+    listEl.dataset.columns = String(columnCount);
     const cols = [];
-    for (let i = 0; i < 1; i++) {
+    for (let i = 0; i < columnCount; i++) {
       const c = document.createElement('div');
       c.className = 'masonry-col';
       listEl.appendChild(c);
       cols.push({ el: c, h: 0 });
     }
-    for (const p of cards) {
-      const idx = cols.length === 1 ? 0 : (cols[0].h <= cols[1].h ? 0 : 1);
+    cards.forEach((p, rank) => {
+      const idx = cols.reduce((shortest, col, i) => col.h < cols[shortest].h ? i : shortest, 0);
       const wrap = document.createElement('div');
-      wrap.innerHTML = cardHtml(p);
+      wrap.innerHTML = cardHtml(p, rank);
       const card = wrap.firstElementChild;
       cols[idx].el.appendChild(card);
       cols[idx].h += card.offsetHeight;
-    }
+    });
   }
 
   function render() {
-    const needs = filterAndSort(
-      state.posts.filter((p) => p.type === 'need'), state.sortNeed, needStatus);
-    const dones = filterAndSort(
-      state.posts.filter((p) => p.type === 'done'), state.sortDone);
-    const needPage = paginate(needs, state.pageNeed);
-    const donePage = paginate(dones, state.pageDone);
-    state.pageNeed = needPage.page;
-    state.pageDone = donePage.page;
-
+    const allNeeds = state.posts.filter((p) => p.type === 'need');
+    const allDones = state.posts.filter((p) => p.type === 'done');
+    const needs = filterAndSort(allNeeds, state.sortNeed, needStatus, state.queryNeed);
+    const dones = filterAndSort(allDones, state.sortDone, null, state.queryDone);
     $('#count-need').textContent = needs.length;
     $('#count-done').textContent = dones.length;
-    $('#mobile-count-need').textContent = needs.length;
-    $('#mobile-count-done').textContent = dones.length;
+    $('#tab-count-need').textContent = allNeeds.length;
+    $('#tab-count-done').textContent = allDones.length;
     $('#hero-need-count').textContent = state.posts.filter((p) => p.type === 'need' && needStatus(p) !== 'done').length;
     $('#hero-done-count').textContent = state.posts.filter((p) => p.type === 'done').length;
 
     $('#sort-need').value = state.sortNeed;
     $('#sort-done').value = state.sortDone;
 
-    if (state.view === 'home') {
-      fillList($('#need-list'), needPage.items, needCard);
-      fillList($('#done-list'), donePage.items, doneCard);
-      renderPagination('need', needPage);
-      renderPagination('done', donePage);
+    if (state.view === 'needs') {
+      fillList($('#need-list'), needs, needCard);
+    } else if (state.view === 'dones') {
+      fillList($('#done-list'), dones, doneCard);
     } else if (state.view === 'wall') {
       renderWall();
     }
 
-    const q = state.query.trim();
+    const q = (state.view === 'dones' ? state.queryDone : state.queryNeed).trim();
     $('#empty-need').textContent = q ? '没有找到匹配的需求' : '还没有需求，发一条让大家看看？';
     $('#empty-done').textContent = q ? '没有找到匹配的成果' : '还没有成果，做完记得来晒一个。';
     $('#empty-need').classList.toggle('hidden', needs.length > 0);
@@ -1907,61 +1891,33 @@
     }
   });
 
-  on('#tab-home', 'click', () => switchView('home'));
+  on('#tab-needs', 'click', () => switchView('needs'));
+  on('#tab-dones', 'click', () => switchView('dones'));
   on('#tab-wall', 'click', () => switchView('wall'));
 
-  function switchMobileType(type) {
-    const nextType = type === 'done' ? 'done' : 'need';
-    if (nextType !== state.mobileType) {
-      if (nextType === 'done') state.pageDone = 1;
-      else state.pageNeed = 1;
-    }
-    state.mobileType = nextType;
-    $('.col-need').classList.toggle('mobile-active', state.mobileType === 'need');
-    $('.col-done').classList.toggle('mobile-active', state.mobileType === 'done');
-    $('#mobile-show-needs').classList.toggle('active', state.mobileType === 'need');
-    $('#mobile-show-dones').classList.toggle('active', state.mobileType === 'done');
-    render();
-  }
-
-  on('#mobile-show-needs', 'click', () => switchMobileType('need'));
-  on('#mobile-show-dones', 'click', () => switchMobileType('done'));
-
   on('#search-input', 'input', (e) => {
-    state.query = e.target.value;
-    state.pageNeed = 1;
-    state.pageDone = 1;
+    if (state.view === 'dones') state.queryDone = e.target.value;
+    else state.queryNeed = e.target.value;
     render();
   });
   on('#sort-need', 'change', (e) => {
     state.sortNeed = e.target.value;
-    state.pageNeed = 1;
     localStorage.setItem('hana_wall_sort_need', state.sortNeed);
     render();
   });
   on('#sort-done', 'change', (e) => {
     state.sortDone = e.target.value;
-    state.pageDone = 1;
     localStorage.setItem('hana_wall_sort_done', state.sortDone);
     render();
   });
 
-  document.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-page-type][data-page-value]');
-    if (!btn || btn.disabled) return;
-    const type = btn.dataset.pageType === 'done' ? 'done' : 'need';
-    const nextPage = Number(btn.dataset.pageValue);
-    const key = type === 'done' ? 'pageDone' : 'pageNeed';
-    if (!Number.isFinite(nextPage) || nextPage < 1 || nextPage === state[key]) return;
-    state[key] = nextPage;
-    render();
-    requestAnimationFrame(() => {
-      const section = $('.col-' + type);
-      if (!section) return;
-      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      const top = section.getBoundingClientRect().top + window.scrollY - 84;
-      window.scrollTo({ top: Math.max(0, top), behavior: reduced ? 'auto' : 'smooth' });
-    });
+  let resizeTimer = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      const list = state.view === 'needs' ? $('#need-list') : state.view === 'dones' ? $('#done-list') : null;
+      if (list && Number(list.dataset.columns || 0) !== masonryColumnCount(list)) render();
+    }, 120);
   });
 
   on('#btn-name', 'click', openNameModal);
@@ -2150,11 +2106,19 @@
 
   function bindList(selector) {
     const list = $(selector);
+    list.addEventListener('keydown', (e) => {
+      if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-open-detail]')) {
+        e.preventDefault();
+        openDetail(Number(e.target.dataset.openDetail));
+      }
+    });
     list.addEventListener('submit', (e) => {
       const form = e.target.closest('.comment-form');
       if (form) submitComment(e);
     });
     list.addEventListener('click', (e) => {
+      const gotoBtn = e.target.closest('[data-goto-detail]');
+      if (gotoBtn) { openDetail(Number(gotoBtn.dataset.gotoDetail)); return; }
       if (e.target.closest('a, img')) return; // 链接/图片自带行为，不触发卡片
       if (e.target.closest('.reply-badge')) { clearReply(); return; }
       const expandBtn = e.target.closest('[data-expand-comments]');
@@ -2237,7 +2201,7 @@
         return;
       }
       const openEl = e.target.closest('[data-open-detail]');
-      if (openEl) renderDetail(Number(openEl.dataset.openDetail));
+      if (openEl) openDetail(Number(openEl.dataset.openDetail));
     });
   }
 
